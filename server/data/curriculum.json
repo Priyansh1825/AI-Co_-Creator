@@ -1,0 +1,20 @@
+{
+  "Grade_7": {
+    "Science": {
+      "Water Conservation and Rainwater Harvesting": {
+        "creative_hooks": [
+          "Start class with two buckets: one full of muddy water and one empty. Ask students how to make the muddy water drinkable.",
+          "Show a picture of an ancient stepwell (Kalyani) and ask why kings built them centuries ago."
+        ],
+        "group_activities": [
+          "DIY Filter: Give groups sand, gravel, and cotton to build a mini water filter in a plastic bottle.",
+          "Roof Mapping: Have students draw their own house roof and map where rain flows to design a harvesting pipe system."
+        ],
+        "local_connections": [
+          "Connect to the Karnataka monsoon season.",
+          "Discuss local lakes that have dried up and how rainwater harvesting could save them."
+        ]
+      }
+    }
+  }
+}
