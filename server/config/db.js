@@ -5,8 +5,8 @@ const connectDB = async () => {
     await mongoose.connect(process.env.MONGODB_URI);
     console.log('✅ Connected to MongoDB successfully');
   } catch (err) {
-    console.error('❌ MongoDB connection error:', err);
-    process.exit(1); // Stop the server if the database fails
+    // Instead of crashing, we just print a warning and let the server keep running!
+    console.warn('⚠️ MongoDB connection failed. Running in "API-Only" fallback mode.');
   }
 };
 
