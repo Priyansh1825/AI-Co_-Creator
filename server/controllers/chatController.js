@@ -1,4 +1,5 @@
 const Groq = require('groq-sdk');
+const mongoose = require('mongoose'); // Added to check connection status
 const Curriculum = require('../models/Curriculum');
 const Chat = require('../models/Chat');
 
@@ -13,7 +14,7 @@ CRITICAL DIRECTIVES:
 3. Ask only 1 or 2 questions at a time.
 
 === YOUR KNOWLEDGE BASE ===
-Here is the official library of verified teaching ideas pulled from our database:
+Here is the official library of verified teaching ideas. If this is empty, rely on your default training:
 ${JSON.stringify(libraryData, null, 2)}
 
 When generating the final lesson plan, you MUST prioritize using the "creative_hooks", "group_activities", and "local_connections" from this database if the user's topic matches.
@@ -44,11 +45,19 @@ Here is the draft of your lesson plan! Let me know what to change.
 const handleChat = async (req, res) => {
   try {
     const { message, history } = req.body;
+    let allCurriculums = {}; // Default to empty if DB is offline
 
-    // 1. Fetch knowledge base from MongoDB
-    const allCurriculums = await Curriculum.find({}).lean();
+    // 1. Check if DB is actually connected (readyState 1 means connected)
+    const isDbConnected = mongoose.connection.readyState === 1;
 
-    // 2. Format history for Groq (React 'ai' -> Groq 'assistant')
+    if (isDbConnected) {
+      // If DB is alive, fetch the knowledge base
+      allCurriculums = await Curriculum.find({}).lean();
+    } else {
+      console.log("⚠️ DB offline: Skipping Knowledge Base retrieval.");
+    }
+
+    // 2. Format history for Groq
     const formattedHistory = history.slice(0, -1).map(msg => ({
       role: msg.role === 'ai' ? 'assistant' : 'user',
       content: msg.content
@@ -61,28 +70,30 @@ const handleChat = async (req, res) => {
       { role: "user", content: message }
     ];
 
-    // 4. Call Groq Llama 3 API
+   // 4. Call Groq API
     const chatCompletion = await groq.chat.completions.create({
       messages: messages,
-      model: "llama3-70b-8192", 
+      model: "llama-3.3-70b-versatile", // <--- UPDATE THIS LINE
       temperature: 0.1, 
     });
-
     const aiReply = chatCompletion.choices[0]?.message?.content || "Error: No response generated.";
-
-    // 5. Save chat log to MongoDB
-    await Chat.findOneAndUpdate(
-      { sessionId: 'session_1' }, 
-      { 
-        $push: { 
-          messages: { $each: [
-            { role: 'user', content: message },
-            { role: 'ai', content: aiReply }
-          ]} 
-        } 
-      },
-      { upsert: true, new: true } 
-    );
+    // 5. Save chat log to MongoDB ONLY if connected
+    if (isDbConnected) {
+      await Chat.findOneAndUpdate(
+        { sessionId: 'session_1' }, 
+        { 
+          $push: { 
+            messages: { $each: [
+              { role: 'user', content: message },
+              { role: 'ai', content: aiReply }
+            ]} 
+          } 
+        },
+        { upsert: true, new: true } 
+      );
+    } else {
+      console.log("⚠️ DB offline: Skipping chat history save.");
+    }
 
     // 6. Send to Frontend
     res.json({ reply: aiReply });
